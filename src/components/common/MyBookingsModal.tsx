@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -20,6 +20,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { AppointmentStatus, Appointment } from '../../types';
 import { printBookingPdf } from '../../utils/printPdf';
+import { searchAppointmentInCloud } from '../../lib/firestoreService';
 
 function normalizeText(input: string): string {
   if (!input) return '';
@@ -78,6 +79,8 @@ export const MyBookingsModal: React.FC = () => {
     customerPhone,
     settings,
     navigateTo,
+    modalInitialQuery,
+    setModalInitialQuery,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
@@ -100,38 +103,47 @@ export const MyBookingsModal: React.FC = () => {
     notFound: false,
   });
 
-  if (!isMyBookingsOpen) return null;
-
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = phoneSearch.trim();
-    if (!query) {
+  const performSearch = async (query: string) => {
+    const q = query.trim();
+    if (!q) {
       setSearchState({ hasSearched: false, query: '', foundItem: null, notFound: false });
       return;
     }
 
     setIsSearching(true);
 
-    // 1. Direct cross-device search on centralized server
+    // 1. Direct Cloud Firestore search (works 100% on Vercel across all devices worldwide)
     try {
-      const res = await fetch(`/api/appointments/search?q=${encodeURIComponent(query)}`);
+      const cloudItem = await searchAppointmentInCloud(q);
+      if (cloudItem) {
+        setSearchState({
+          hasSearched: true,
+          query: q,
+          foundItem: cloudItem,
+          notFound: false,
+        });
+        lookupBookings(q);
+        setIsSearching(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Cloud search check warning:', err);
+    }
+
+    // 2. Direct cross-device search on centralized server (dev/container fallback)
+    try {
+      const res = await fetch(`/api/appointments/search?q=${encodeURIComponent(q)}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.appointment) {
           const remoteApt = json.appointment as Appointment;
           setSearchState({
             hasSearched: true,
-            query,
+            query: q,
             foundItem: remoteApt,
             notFound: false,
           });
-          lookupBookings(query);
+          lookupBookings(q);
           setIsSearching(false);
           return;
         }
@@ -140,29 +152,46 @@ export const MyBookingsModal: React.FC = () => {
       console.warn('Network server lookup failed, falling back to local list:', err);
     }
 
-    // 2. Search locally in appointments state using matchesAppointment
-    const match = appointments.find((a) => matchesAppointment(a, query));
+    // 3. Search locally in appointments state using matchesAppointment
+    const match = appointments.find((a) => matchesAppointment(a, q));
 
     if (match) {
-      // 1. Order ID exists -> display the order immediately
       setSearchState({
         hasSearched: true,
-        query,
+        query: q,
         foundItem: match,
         notFound: false,
       });
-      lookupBookings(query);
+      lookupBookings(q);
     } else {
-      // 2. Order ID does NOT exist -> reject with explicit refusal banner
       setSearchState({
         hasSearched: true,
-        query,
+        query: q,
         foundItem: null,
         notFound: true,
       });
     }
 
     setIsSearching(false);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(phoneSearch);
+  };
+
+  useEffect(() => {
+    if (modalInitialQuery) {
+      setPhoneSearch(modalInitialQuery);
+      performSearch(modalInitialQuery);
+      setModalInitialQuery('');
+    }
+  }, [modalInitialQuery]);
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleResetSearch = () => {
@@ -469,6 +498,8 @@ export const MyBookingsModal: React.FC = () => {
       </div>
     );
   };
+
+  if (!isMyBookingsOpen) return null;
 
   return (
     <div

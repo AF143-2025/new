@@ -21,6 +21,13 @@ import {
   initialBusinessHours,
   initialSettings,
 } from '../data/initialData';
+import {
+  saveAppointmentToCloud,
+  deleteAppointmentFromCloud,
+  searchAppointmentInCloud,
+  listenToCloudAppointments,
+  seedInitialAppointmentsToCloud,
+} from '../lib/firestoreService';
 
 interface AppContextType {
   // Active View (Single-page app routing / portal view)
@@ -76,6 +83,9 @@ interface AppContextType {
   lookupBookingsByPhone: (phone: string) => void;
   customerPhone: string;
   setCustomerPhone: (phone: string) => void;
+  modalInitialQuery: string;
+  setModalInitialQuery: (q: string) => void;
+  searchAndOpenModal: (q: string) => void;
 
   // Customers
   customers: Customer[];
@@ -195,29 +205,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadStored('customers', initialCustomers)
   );
 
-  // Sync appointments with shared server across all devices
+  // Real-time synchronization via Cloud Firestore (works 100% on Vercel and all devices worldwide)
   useEffect(() => {
-    let isMounted = true;
-    const syncAppointments = async () => {
+    // 1. Seed sample appointments to Firestore if empty
+    seedInitialAppointmentsToCloud(initialAppointments);
+
+    // 2. Real-time Firestore snapshot listener (Cross-device, real-time everywhere)
+    const unsubscribe = listenToCloudAppointments((cloudApts) => {
+      if (cloudApts && cloudApts.length > 0) {
+        setAppointments(cloudApts);
+        localStorage.setItem('stylecity_appointments', JSON.stringify(cloudApts));
+      }
+    });
+
+    // 3. Server-side sync for dev/container environment
+    const syncServer = async () => {
       try {
         const res = await fetch('/api/appointments');
         if (res.ok) {
           const data = await res.json();
-          if (data.success && Array.isArray(data.appointments) && isMounted) {
-            setAppointments(data.appointments);
+          if (data.success && Array.isArray(data.appointments)) {
+            setAppointments((prev) => {
+              const map = new Map();
+              data.appointments.forEach((a: Appointment) => map.set(a.id, a));
+              prev.forEach((a) => map.set(a.id, a));
+              return Array.from(map.values());
+            });
           }
         }
       } catch {
-        // Silent catch if server offline
+        // Silent catch when hosted statically on Vercel
       }
     };
 
-    syncAppointments();
-    // Live polling every 3.5 seconds so all devices stay updated in real time
-    const interval = setInterval(syncAppointments, 3500);
+    syncServer();
+    const interval = setInterval(syncServer, 8000);
 
     return () => {
-      isMounted = false;
+      unsubscribe();
       clearInterval(interval);
     };
   }, []);
@@ -252,6 +277,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('stylecity_customer_phone', phone);
   };
 
+  const [modalInitialQuery, setModalInitialQuery] = useState<string>('');
+
+  const searchAndOpenModal = (q: string) => {
+    setModalInitialQuery(q);
+    lookupBookings(q);
+    setIsMyBookingsOpen(true);
+  };
+
   const myBookings = useMemo(() => {
     const cleanPhone = customerPhone.replace(/\D/g, '');
     return appointments.filter((apt) => {
@@ -270,7 +303,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const raw = query.trim();
     if (!raw) return false;
 
-    // Trigger async server search & sync
+    // 1. Direct Cloud Firestore search (works 100% on Vercel across all devices)
+    searchAppointmentInCloud(raw)
+      .then((cloudApt) => {
+        if (cloudApt) {
+          setAppointments((prev) => [cloudApt, ...prev.filter((a) => a.id !== cloudApt.id)]);
+          setMyBookingIds((prev) => {
+            const merged = Array.from(new Set([cloudApt.id, ...prev]));
+            localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+
+    // 2. Trigger async server search & sync (dev fallback)
     fetch(`/api/appointments/search?q=${encodeURIComponent(raw)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -317,9 +364,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const cancelMyBooking = (id: string) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a))
-    );
+    setAppointments((prev) => {
+      const updated = prev.map((a) => (a.id === id ? { ...a, status: 'cancelled' as AppointmentStatus } : a));
+      const target = updated.find((a) => a.id === id);
+      if (target) {
+        saveAppointmentToCloud(target).catch(console.warn);
+      }
+      return updated;
+    });
+    fetch(`/api/appointments/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' }),
+    }).catch(console.warn);
     showToast('تم إلغاء طلب الحجز');
   };
 
@@ -490,7 +547,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setAppointments((prev) => [newAppointment, ...prev]);
 
-    // Send to centralized server for cross-device persistence
+    // 1. Save directly to Cloud Firestore (Real-time cloud database across all devices on Vercel)
+    saveAppointmentToCloud(newAppointment).catch((err) =>
+      console.warn('Cloud Firestore save error:', err)
+    );
+
+    // 2. Send to centralized server for dev/container environment
     fetch('/api/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -558,7 +620,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateAppointmentStatus = (id: string, status: AppointmentStatus) => {
-    setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+    setAppointments((prev) => {
+      const updated = prev.map((a) => (a.id === id ? { ...a, status } : a));
+      const target = updated.find((a) => a.id === id);
+      if (target) {
+        saveAppointmentToCloud(target).catch(console.warn);
+      }
+      return updated;
+    });
     fetch(`/api/appointments/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -568,9 +637,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateAppointmentNotes = (id: string, internalNotes: string) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, internal_notes: internalNotes } : a))
-    );
+    setAppointments((prev) => {
+      const updated = prev.map((a) => (a.id === id ? { ...a, internal_notes: internalNotes } : a));
+      const target = updated.find((a) => a.id === id);
+      if (target) {
+        saveAppointmentToCloud(target).catch(console.warn);
+      }
+      return updated;
+    });
     fetch(`/api/appointments/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -580,6 +654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAppointment = (id: string) => {
+    deleteAppointmentFromCloud(id).catch(console.warn);
     setAppointments((prev) => {
       const updated = prev.filter((a) => a.id !== id);
       localStorage.setItem('stylecity_appointments', JSON.stringify(updated));
@@ -683,6 +758,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lookupBookingsByPhone,
         customerPhone,
         setCustomerPhone,
+        modalInitialQuery,
+        setModalInitialQuery,
+        searchAndOpenModal,
         customers,
         updateCustomerNotes,
         isAdminOpen,

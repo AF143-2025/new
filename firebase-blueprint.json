@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Beauty center appointment record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique appointment ID"
+        },
+        "booking_number": {
+          "type": "string",
+          "description": "Customer facing booking code (e.g. SC-8421)"
+        },
+        "customer_name": {
+          "type": "string",
+          "description": "Customer full name"
+        },
+        "customer_phone": {
+          "type": "string",
+          "description": "Customer phone number"
+        },
+        "department_id": {
+          "type": "string",
+          "description": "Department identifier"
+        },
+        "department_name": {
+          "type": "string",
+          "description": "Department name in Arabic"
+        },
+        "service_id": {
+          "type": "string",
+          "description": "Service identifier"
+        },
+        "service_name": {
+          "type": "string",
+          "description": "Service name in Arabic"
+        },
+        "staff_id": {
+          "type": "string",
+          "description": "Assigned staff member ID"
+        },
+        "staff_name": {
+          "type": "string",
+          "description": "Assigned staff member name"
+        },
+        "date": {
+          "type": "string",
+          "description": "Appointment date (YYYY-MM-DD)"
+        },
+        "time": {
+          "type": "string",
+          "description": "Appointment time (HH:MM)"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Customer notes or instructions"
+        },
+        "internal_notes": {
+          "type": "string",
+          "description": "Staff internal notes"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "cancelled", "completed"],
+          "description": "Booking workflow status"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["booking_number", "customer_name", "customer_phone", "date", "time", "status"]
+    }
+  },
+  "firestore": {
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Appointments collection allowing booking creation and lookup across devices"
+    }
+  }
+}

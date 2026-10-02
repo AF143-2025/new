@@ -18,14 +18,13 @@ import { useApp } from '../../context/AppContext';
 import { ActiveView } from '../../types';
 
 export const Hero: React.FC = () => {
-  const { navigateTo, settings, myBookings, setIsMyBookingsOpen, lookupBookings } = useApp();
+  const { navigateTo, settings, myBookings, setIsMyBookingsOpen, searchAndOpenModal } = useApp();
   const [heroSearchId, setHeroSearchId] = useState('');
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (heroSearchId.trim()) {
-      lookupBookings(heroSearchId.trim());
-      setIsMyBookingsOpen(true);
+      searchAndOpenModal(heroSearchId.trim());
     }
   };
 
