@@ -21,6 +21,50 @@ import { useApp } from '../../context/AppContext';
 import { AppointmentStatus, Appointment } from '../../types';
 import { printBookingPdf } from '../../utils/printPdf';
 
+function normalizeText(input: string): string {
+  if (!input) return '';
+  const arDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let res = input;
+  arDigits.forEach((d, i) => {
+    res = res.replaceAll(d, String(i));
+  });
+  return res.trim().toLowerCase();
+}
+
+function matchesAppointment(apt: Appointment, rawQuery: string): boolean {
+  if (!rawQuery) return false;
+  const q = normalizeText(rawQuery);
+  const qAlnum = q.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
+  const qDigits = q.replace(/\D/g, '');
+
+  // 1. Booking number matches (e.g. "SC-8421", "8421", "sc 8421")
+  const aptNum = normalizeText(apt.booking_number);
+  const aptNumAlnum = aptNum.replace(/[^a-z0-9]/gi, '');
+  const aptDigits = aptNum.replace(/\D/g, '');
+
+  if (aptNum === q) return true;
+  if (aptNum.includes(q) || q.includes(aptNum)) return true;
+  if (qAlnum && (aptNumAlnum.includes(qAlnum) || qAlnum.includes(aptNumAlnum))) return true;
+  if (qDigits && aptDigits.includes(qDigits)) return true;
+
+  // 2. Internal ID match
+  if (apt.id.toLowerCase() === q || apt.id.toLowerCase().includes(q)) return true;
+
+  // 3. Customer Name match (e.g. "سارة", "مريم", "الجبوري", "ريم")
+  const custName = normalizeText(apt.customer_name);
+  if (custName.includes(q) || q.includes(custName)) return true;
+  const nameParts = custName.split(/\s+/);
+  if (nameParts.some((p) => p.length >= 2 && (q.includes(p) || p.includes(q)))) return true;
+
+  // 4. Customer Phone match
+  const phoneDigits = apt.customer_phone.replace(/\D/g, '');
+  if (qDigits.length >= 3) {
+    if (phoneDigits.includes(qDigits) || qDigits.includes(phoneDigits)) return true;
+  }
+
+  return false;
+}
+
 export const MyBookingsModal: React.FC = () => {
   const {
     isMyBookingsOpen,
@@ -96,21 +140,8 @@ export const MyBookingsModal: React.FC = () => {
       console.warn('Network server lookup failed, falling back to local list:', err);
     }
 
-    // 2. Search locally in appointments state
-    const upper = query.toUpperCase();
-    const cleanDigits = query.replace(/\D/g, '');
-
-    const match = appointments.find((a) => {
-      const aptUpper = a.booking_number.toUpperCase();
-      if (aptUpper === upper || aptUpper.includes(upper)) return true;
-      if (cleanDigits.length >= 3 && aptUpper.replace(/\D/g, '').includes(cleanDigits)) return true;
-      if (a.id.toLowerCase() === query.toLowerCase()) return true;
-      if (cleanDigits.length >= 7) {
-        const aptDigits = a.customer_phone.replace(/\D/g, '');
-        if (aptDigits.includes(cleanDigits) || cleanDigits.includes(aptDigits)) return true;
-      }
-      return false;
-    });
+    // 2. Search locally in appointments state using matchesAppointment
+    const match = appointments.find((a) => matchesAppointment(a, query));
 
     if (match) {
       // 1. Order ID exists -> display the order immediately

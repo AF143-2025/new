@@ -1,6 +1,22 @@
 {
   "appointments": [
     {
+      "id": "apt-1790941316467-225",
+      "booking_number": "SC-7962",
+      "customer_name": "فاطمة علي",
+      "customer_phone": "07801122334",
+      "department_id": "",
+      "department_name": "قسم الأظافر",
+      "service_id": "",
+      "service_name": "مانيكير وبديكير",
+      "date": "2026-10-06",
+      "time": "16:00",
+      "notes": "",
+      "internal_notes": "",
+      "status": "pending",
+      "created_at": "2026-10-02T11:41:56.467Z"
+    },
+    {
       "id": "apt-1790940911889-236",
       "booking_number": "SC-2974",
       "customer_name": "ريم البغدادي",
@@ -13,7 +29,7 @@
       "time": "15:00",
       "notes": "",
       "internal_notes": "",
-      "status": "pending",
+      "status": "confirmed",
       "created_at": "2026-10-02T11:35:11.889Z"
     },
     {
@@ -532,6 +548,14 @@
       "appointments_count": 1,
       "last_visit": "2026-10-05",
       "created_at": "2026-10-02T11:35:11.889Z"
+    },
+    {
+      "id": "cust-1790941316467",
+      "name": "فاطمة علي",
+      "phone": "07801122334",
+      "appointments_count": 1,
+      "last_visit": "2026-10-06",
+      "created_at": "2026-10-02T11:41:56.467Z"
     }
   ],
   "businessHours": [

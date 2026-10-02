@@ -108,6 +108,50 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+function normalizeText(input: string): string {
+  if (!input) return '';
+  const arDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let res = input;
+  arDigits.forEach((d, i) => {
+    res = res.replaceAll(d, String(i));
+  });
+  return res.trim().toLowerCase();
+}
+
+function matchesAppointment(apt: Appointment, rawQuery: string): boolean {
+  if (!rawQuery) return false;
+  const q = normalizeText(rawQuery);
+  const qAlnum = q.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
+  const qDigits = q.replace(/\D/g, '');
+
+  // 1. Booking number matches (e.g. "SC-8421", "8421", "sc 8421")
+  const aptNum = normalizeText(apt.booking_number);
+  const aptNumAlnum = aptNum.replace(/[^a-z0-9]/gi, '');
+  const aptDigits = aptNum.replace(/\D/g, '');
+
+  if (aptNum === q) return true;
+  if (aptNum.includes(q) || q.includes(aptNum)) return true;
+  if (qAlnum && (aptNumAlnum.includes(qAlnum) || qAlnum.includes(aptNumAlnum))) return true;
+  if (qDigits && aptDigits.includes(qDigits)) return true;
+
+  // 2. Internal ID match
+  if (apt.id.toLowerCase() === q || apt.id.toLowerCase().includes(q)) return true;
+
+  // 3. Customer Name match (e.g. "سارة", "مريم", "الجبوري", "ريم")
+  const custName = normalizeText(apt.customer_name);
+  if (custName.includes(q) || q.includes(custName)) return true;
+  const nameParts = custName.split(/\s+/);
+  if (nameParts.some((p) => p.length >= 2 && (q.includes(p) || p.includes(q)))) return true;
+
+  // 4. Customer Phone match
+  const phoneDigits = apt.customer_phone.replace(/\D/g, '');
+  if (qDigits.length >= 3) {
+    if (phoneDigits.includes(qDigits) || qDigits.includes(phoneDigits)) return true;
+  }
+
+  return false;
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Local storage helpers
   const loadStored = <T,>(key: string, fallback: T): T => {
@@ -226,26 +270,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const raw = query.trim();
     if (!raw) return false;
 
-    const upperQuery = raw.toUpperCase();
-    const cleanDigits = raw.replace(/\D/g, '');
+    // Trigger async server search & sync
+    fetch(`/api/appointments/search?q=${encodeURIComponent(raw)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.success && data.appointment) {
+          const apt = data.appointment as Appointment;
+          setAppointments((prev) => [apt, ...prev.filter((a) => a.id !== apt.id)]);
+          setMyBookingIds((prev) => {
+            const merged = Array.from(new Set([apt.id, ...prev]));
+            localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
 
-    const found = appointments.filter((a) => {
-      // 1. Order ID match (e.g. "SC-8421", "8421", "SC8421")
-      const aptNumberUpper = a.booking_number.toUpperCase();
-      if (aptNumberUpper === upperQuery || aptNumberUpper.includes(upperQuery)) return true;
-      if (cleanDigits.length >= 3 && aptNumberUpper.replace(/\D/g, '').includes(cleanDigits)) return true;
-
-      // 2. Internal ID match
-      if (a.id.toLowerCase() === raw.toLowerCase()) return true;
-
-      // 3. Customer phone match
-      if (cleanDigits.length >= 7) {
-        const aptDigits = a.customer_phone.replace(/\D/g, '');
-        if (aptDigits.includes(cleanDigits) || cleanDigits.includes(aptDigits)) return true;
-      }
-
-      return false;
-    });
+    const found = appointments.filter((a) => matchesAppointment(a, raw));
 
     if (found.length > 0) {
       setMyBookingIds((prev) => {
@@ -253,11 +294,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(merged));
         return merged;
       });
-
-      // If phone found, also remember phone
-      if (cleanDigits.length >= 7) {
-        setCustomerPhone(raw);
-      }
 
       const top = found[0];
       const statusLabel =
@@ -272,7 +308,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(`تم العثور على الحجز [${top.booking_number}] — الحالة: ${statusLabel}`);
       return true;
     } else {
-      showToast('لم يتم العثور على حجز بهذا الآيدي أو الرقم');
       return false;
     }
   };

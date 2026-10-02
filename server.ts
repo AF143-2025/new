@@ -78,6 +78,50 @@ function saveDatabase(db: ServerDatabase): void {
   }
 }
 
+function normalizeText(input: string): string {
+  if (!input) return '';
+  const arDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let res = input;
+  arDigits.forEach((d, i) => {
+    res = res.replaceAll(d, String(i));
+  });
+  return res.trim().toLowerCase();
+}
+
+function matchesAppointment(apt: Appointment, rawQuery: string): boolean {
+  if (!rawQuery) return false;
+  const q = normalizeText(rawQuery);
+  const qAlnum = q.replace(/[^a-z0-9\u0600-\u06FF]/gi, ''); // alphanumeric only (including Arabic)
+  const qDigits = q.replace(/\D/g, ''); // digits only
+
+  // 1. Booking number matches (e.g. "SC-8421", "8421", "sc 8421")
+  const aptNum = normalizeText(apt.booking_number);
+  const aptNumAlnum = aptNum.replace(/[^a-z0-9]/gi, ''); // "sc8421"
+  const aptDigits = aptNum.replace(/\D/g, ''); // "8421"
+
+  if (aptNum === q) return true;
+  if (aptNum.includes(q) || q.includes(aptNum)) return true;
+  if (qAlnum && (aptNumAlnum.includes(qAlnum) || qAlnum.includes(aptNumAlnum))) return true;
+  if (qDigits && aptDigits.includes(qDigits)) return true;
+
+  // 2. Internal ID match
+  if (apt.id.toLowerCase() === q || apt.id.toLowerCase().includes(q)) return true;
+
+  // 3. Customer Name match (e.g. "سارة", "مريم", "الجبوري", "ريم")
+  const custName = normalizeText(apt.customer_name);
+  if (custName.includes(q) || q.includes(custName)) return true;
+  const nameParts = custName.split(/\s+/);
+  if (nameParts.some((p) => p.length >= 2 && (q.includes(p) || p.includes(q)))) return true;
+
+  // 4. Customer Phone match
+  const phoneDigits = apt.customer_phone.replace(/\D/g, '');
+  if (qDigits.length >= 3) {
+    if (phoneDigits.includes(qDigits) || qDigits.includes(phoneDigits)) return true;
+  }
+
+  return false;
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json());
@@ -95,7 +139,36 @@ async function startServer() {
     res.json({ success: true, appointments: db.appointments });
   });
 
-  // 2. Search appointment by Order ID or Phone (Cross-device instant lookup)
+  // 1.1 Two-way sync: Merge any appointments from client localStorage into server DB
+  app.post('/api/appointments/sync', (req: Request, res: Response) => {
+    const { localAppointments } = req.body;
+    const db = getDatabase();
+
+    let addedCount = 0;
+    if (Array.isArray(localAppointments)) {
+      for (const localApt of localAppointments) {
+        if (!localApt || !localApt.id || !localApt.booking_number) continue;
+        const exists = db.appointments.some(
+          (a) =>
+            a.id === localApt.id ||
+            a.booking_number.toUpperCase() === localApt.booking_number.toUpperCase()
+        );
+        if (!exists) {
+          db.appointments.unshift(localApt);
+          addedCount++;
+        }
+      }
+    }
+
+    if (addedCount > 0) {
+      saveDatabase(db);
+      console.log(`[Sync] Merged ${addedCount} appointments from client into shared DB`);
+    }
+
+    return res.json({ success: true, appointments: db.appointments });
+  });
+
+  // 2. Search appointment by Order ID, Phone or Name (Cross-device instant lookup)
   app.get('/api/appointments/search', (req: Request, res: Response) => {
     const query = ((req.query.q as string) || '').trim();
     if (!query) {
@@ -103,26 +176,7 @@ async function startServer() {
     }
 
     const db = getDatabase();
-    const upperQuery = query.toUpperCase();
-    const cleanDigits = query.replace(/\D/g, '');
-
-    const found = db.appointments.find((a) => {
-      const aptUpper = a.booking_number.toUpperCase();
-      // Match exact Order ID (e.g. "SC-8421" or "8421" or "SC8421")
-      if (aptUpper === upperQuery || aptUpper.includes(upperQuery)) return true;
-      if (cleanDigits.length >= 3 && aptUpper.replace(/\D/g, '').includes(cleanDigits)) return true;
-
-      // Match internal id
-      if (a.id.toLowerCase() === query.toLowerCase()) return true;
-
-      // Match phone digits
-      if (cleanDigits.length >= 7) {
-        const aptPhoneDigits = a.customer_phone.replace(/\D/g, '');
-        if (aptPhoneDigits.includes(cleanDigits) || cleanDigits.includes(aptPhoneDigits)) return true;
-      }
-
-      return false;
-    });
+    const found = db.appointments.find((a) => matchesAppointment(a, query));
 
     if (found) {
       return res.json({ success: true, appointment: found });

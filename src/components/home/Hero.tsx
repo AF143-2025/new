@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MapPin,
   Calendar,
@@ -11,13 +11,23 @@ import {
   Clock,
   Shield,
   HeartHandshake,
+  Search,
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { useApp } from '../../context/AppContext';
 import { ActiveView } from '../../types';
 
 export const Hero: React.FC = () => {
-  const { navigateTo, settings, myBookings, setIsMyBookingsOpen } = useApp();
+  const { navigateTo, settings, myBookings, setIsMyBookingsOpen, lookupBookings } = useApp();
+  const [heroSearchId, setHeroSearchId] = useState('');
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (heroSearchId.trim()) {
+      lookupBookings(heroSearchId.trim());
+      setIsMyBookingsOpen(true);
+    }
+  };
 
   const portalCards: {
     id: ActiveView;
@@ -132,7 +142,7 @@ export const Hero: React.FC = () => {
         )}
 
         {/* Main Immediate Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-14">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-6">
           <button
             onClick={() => navigateTo('booking')}
             className="w-full sm:w-auto min-w-[200px] px-9 py-3.5 bg-gradient-to-r from-[#D4BD86] via-[#B99A5B] to-[#9E8043] text-[#0B0A09] font-bold text-sm tracking-wide rounded-sm shadow-[0_0_25px_rgba(185,154,91,0.4)] hover:shadow-[0_0_35px_rgba(185,154,91,0.6)] transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2"
@@ -148,6 +158,32 @@ export const Hero: React.FC = () => {
             <Layers className="w-4 h-4 text-[#B99A5B]" />
             <span>اكتشف اقسامنا</span>
           </button>
+        </div>
+
+        {/* Quick Cross-Device Order ID Lookup Form on Hero */}
+        <div className="w-full max-w-md mx-auto mb-14">
+          <form
+            onSubmit={handleHeroSearch}
+            className="flex items-center gap-2 p-1.5 bg-[#14120F]/90 border border-[#B99A5B]/40 hover:border-[#B99A5B] rounded-sm shadow-xl transition-all backdrop-blur-md"
+          >
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-[#B99A5B] absolute right-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={heroSearchId}
+                onChange={(e) => setHeroSearchId(e.target.value)}
+                placeholder="تتبع طلبك بالآيدي (مثال: SC-8421 أو 8421)..."
+                className="w-full pl-3 pr-9 py-2 bg-transparent text-xs text-[#F5F1EA] placeholder-[#D8D0C4]/50 focus:outline-none"
+                dir="rtl"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#B99A5B] hover:bg-[#D4BD86] text-[#0B0A09] font-bold text-xs rounded-sm transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-sm"
+            >
+              <span>استعلام فوري</span>
+            </button>
+          </form>
         </div>
 
         {/* Editorial Luxury Platform Portal Directory Grid */}
