@@ -72,6 +72,7 @@ interface AppContextType {
   setIsMyBookingsOpen: (open: boolean) => void;
   myBookings: Appointment[];
   cancelMyBooking: (id: string) => void;
+  lookupBookings: (query: string) => boolean;
   lookupBookingsByPhone: (phone: string) => void;
   customerPhone: string;
   setCustomerPhone: (phone: string) => void;
@@ -194,24 +195,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [appointments, myBookingIds, customerPhone]);
 
-  const lookupBookingsByPhone = (phone: string) => {
-    const clean = phone.trim();
-    setCustomerPhone(clean);
-    const cleanDigits = clean.replace(/\D/g, '');
+  const lookupBookings = (query: string): boolean => {
+    const raw = query.trim();
+    if (!raw) return false;
+
+    const upperQuery = raw.toUpperCase();
+    const cleanDigits = raw.replace(/\D/g, '');
+
     const found = appointments.filter((a) => {
-      const aptDigits = a.customer_phone.replace(/\D/g, '');
-      return cleanDigits.length >= 7 && (aptDigits.includes(cleanDigits) || cleanDigits.includes(aptDigits));
+      // 1. Order ID match (e.g. "SC-8421", "8421", "SC8421")
+      const aptNumberUpper = a.booking_number.toUpperCase();
+      if (aptNumberUpper === upperQuery || aptNumberUpper.includes(upperQuery)) return true;
+      if (cleanDigits.length >= 3 && aptNumberUpper.replace(/\D/g, '').includes(cleanDigits)) return true;
+
+      // 2. Internal ID match
+      if (a.id.toLowerCase() === raw.toLowerCase()) return true;
+
+      // 3. Customer phone match
+      if (cleanDigits.length >= 7) {
+        const aptDigits = a.customer_phone.replace(/\D/g, '');
+        if (aptDigits.includes(cleanDigits) || cleanDigits.includes(aptDigits)) return true;
+      }
+
+      return false;
     });
+
     if (found.length > 0) {
       setMyBookingIds((prev) => {
-        const merged = Array.from(new Set([...prev, ...found.map((a) => a.id)]));
+        const merged = Array.from(new Set([...found.map((a) => a.id), ...prev]));
         localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(merged));
         return merged;
       });
-      showToast(`تم العثور على ${found.length} حجز`);
+
+      // If phone found, also remember phone
+      if (cleanDigits.length >= 7) {
+        setCustomerPhone(raw);
+      }
+
+      const top = found[0];
+      const statusLabel =
+        top.status === 'confirmed'
+          ? 'موافق عليه ومؤكد ✓'
+          : top.status === 'pending'
+          ? 'قيد الانتظار والمراجعة'
+          : top.status === 'cancelled'
+          ? 'ملغى'
+          : 'مكتمل';
+
+      showToast(`تم العثور على الحجز [${top.booking_number}] — الحالة: ${statusLabel}`);
+      return true;
     } else {
-      showToast('لم يتم العثور على حجوزات مسجلة بهذا الرقم');
+      showToast('لم يتم العثور على حجز بهذا الآيدي أو الرقم');
+      return false;
     }
+  };
+
+  const lookupBookingsByPhone = (phone: string) => {
+    lookupBookings(phone);
   };
 
   const cancelMyBooking = (id: string) => {
@@ -549,6 +589,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsMyBookingsOpen,
         myBookings,
         cancelMyBooking,
+        lookupBookings,
         lookupBookingsByPhone,
         customerPhone,
         setCustomerPhone,

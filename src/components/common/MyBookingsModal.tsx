@@ -11,9 +11,13 @@ import {
   Phone,
   AlertCircle,
   Trash2,
+  Printer,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AppointmentStatus, Appointment } from '../../types';
+import { printBookingPdf } from '../../utils/printPdf';
 
 export const MyBookingsModal: React.FC = () => {
   const {
@@ -22,6 +26,7 @@ export const MyBookingsModal: React.FC = () => {
     myBookings,
     cancelMyBooking,
     deleteAppointment,
+    lookupBookings,
     lookupBookingsByPhone,
     customerPhone,
     settings,
@@ -32,13 +37,20 @@ export const MyBookingsModal: React.FC = () => {
   const [phoneSearch, setPhoneSearch] = useState(customerPhone || '');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   if (!isMyBookingsOpen) return null;
 
-  const handlePhoneLookup = (e: React.FormEvent) => {
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (phoneSearch.trim()) {
-      lookupBookingsByPhone(phoneSearch.trim());
+      lookupBookings(phoneSearch.trim());
     }
   };
 
@@ -180,27 +192,27 @@ export const MyBookingsModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Phone Lookup & Filter Tabs */}
+        {/* Order ID or Phone Search & Filter Tabs */}
         <div className="p-4 sm:px-6 bg-[#13110E] border-b border-white/5 space-y-3 shrink-0">
-          {/* Quick Phone Search */}
-          <form onSubmit={handlePhoneLookup} className="flex gap-2">
+          {/* Quick Order ID or Phone Search */}
+          <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative flex-1">
-              <Phone className="w-3.5 h-3.5 text-[#B99A5B] absolute right-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#B99A5B] absolute right-3 top-1/2 -translate-y-1/2" />
               <input
-                type="tel"
+                type="text"
                 value={phoneSearch}
                 onChange={(e) => setPhoneSearch(e.target.value)}
-                placeholder="أدخلي رقم هاتفك لمزامنة كافة الحجوزات..."
+                placeholder="ابحثي بآيدي الطلب (مثال: SC-8421) أو برقم الهاتف للاستعلام الفوري..."
                 className="w-full pl-3 pr-9 py-2 bg-white/5 border border-white/10 focus:border-[#B99A5B] rounded-sm text-xs text-[#F5F1EA] placeholder-[#D8D0C4]/40 focus:outline-none transition-colors"
                 dir="rtl"
               />
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#B99A5B]/20 hover:bg-[#B99A5B] text-[#D4BD86] hover:text-[#0B0A09] border border-[#B99A5B]/40 text-xs font-semibold rounded-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="px-4 py-2 bg-[#B99A5B] hover:bg-[#D4BD86] text-[#0B0A09] font-bold text-xs rounded-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
             >
               <Search className="w-3.5 h-3.5" />
-              <span>مزامنة</span>
+              <span>استعلام وبحث</span>
             </button>
           </form>
 
@@ -311,13 +323,35 @@ export const MyBookingsModal: React.FC = () => {
                       {getStatusBadge(apt.status)}
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[#D8D0C4]/60">رقم الحجز:</span>
-                        <span className="font-mono font-bold text-[#D4BD86] text-sm tracking-wider" dir="ltr">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded border border-white/10">
+                        <span className="text-[#D8D0C4]/60">آيدي الطلب:</span>
+                        <span className="font-mono font-bold text-[#D4BD86] text-xs sm:text-sm tracking-wider" dir="ltr">
                           {apt.booking_number}
                         </span>
+                        <button
+                          onClick={() => handleCopy(apt.id, apt.booking_number)}
+                          className="text-[#D8D0C4]/50 hover:text-[#B99A5B] p-0.5 transition-colors cursor-pointer"
+                          title="نسخ آيدي الطلب"
+                        >
+                          {copiedId === apt.id ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
+
+                      <button
+                        onClick={() => printBookingPdf(apt, settings)}
+                        title="طباعة وتنزيل تذكرة الحجز بصيغة PDF"
+                        aria-label="طباعة PDF"
+                        className="p-1.5 text-[#D8D0C4]/70 hover:text-[#B99A5B] hover:bg-[#B99A5B]/15 rounded border border-white/10 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-[#B99A5B]" />
+                        <span className="hidden sm:inline text-[11px] font-medium">PDF</span>
+                      </button>
+
                       <button
                         onClick={() => setDeletingId(apt.id)}
                         title="حذف الحجز نهائياً"
@@ -383,6 +417,17 @@ export const MyBookingsModal: React.FC = () => {
                     </a>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* Print PDF Voucher button */}
+                      <button
+                        type="button"
+                        onClick={() => printBookingPdf(apt, settings)}
+                        className="px-3 py-1.5 bg-[#B99A5B]/15 hover:bg-[#B99A5B] text-[#D4BD86] hover:text-[#0B0A09] text-xs font-semibold rounded-sm transition-all flex items-center gap-1.5 border border-[#B99A5B]/30 cursor-pointer"
+                        title="طبع أو تحميل تذكرة الحجز بصيغة PDF"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>طباعة تذكرة PDF</span>
+                      </button>
+
                       {/* Delete permanently button */}
                       {deletingId === apt.id ? (
                         <div className="flex items-center gap-1.5 bg-rose-950/70 px-2 py-1 rounded-sm border border-rose-500/40 animate-fade-in">

@@ -11,9 +11,13 @@ import {
   ArrowLeft,
   MessageCircle,
   ShieldCheck,
+  Printer,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Appointment } from '../../types';
+import { printBookingPdf } from '../../utils/printPdf';
 
 export const BookingSection: React.FC = () => {
   const {
@@ -24,9 +28,11 @@ export const BookingSection: React.FC = () => {
     selectedDepartmentForBooking,
     selectedServiceForBooking,
     setIsMyBookingsOpen,
+    settings,
   } = useApp();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [copiedId, setCopiedId] = useState<boolean>(false);
 
   // Form selections
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
@@ -226,10 +232,52 @@ export const BookingSection: React.FC = () => {
               شكراً لاختياركم Style City. تم تسجيل تفاصيل الموعد بنجاح، وسيقوم فريق الاستقبال بالتواصل معكم لتأكيد الموعد النهائي.
             </p>
 
+            {/* Prominent Order ID Card */}
+            <div className="bg-gradient-to-b from-[#181613] to-[#0F0D0B] border-2 border-[#B99A5B] p-5 sm:p-6 rounded-sm max-w-lg mx-auto text-center mb-6 shadow-[0_0_30px_rgba(185,154,91,0.25)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-[#B99A5B]/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <span className="text-[11px] font-sans tracking-[0.25em] text-[#D8D0C4]/80 uppercase block mb-1">
+                آيدي الطلب الرسمي · ORDER ID
+              </span>
+
+              <div className="flex items-center justify-center gap-3 my-2">
+                <span className="font-mono text-3xl sm:text-4xl font-extrabold text-[#D4BD86] tracking-widest selection:bg-[#B99A5B]/40" dir="ltr">
+                  {submittedAppointment.booking_number}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(submittedAppointment.booking_number);
+                    setCopiedId(true);
+                    setTimeout(() => setCopiedId(false), 2500);
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-[#B99A5B] text-[#F5F1EA] hover:text-[#0B0A09] rounded-sm text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/15 cursor-pointer active:scale-95"
+                  title="نسخ آيدي الطلب"
+                >
+                  {copiedId ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400 font-bold">تم النسخ</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-[#B99A5B]" />
+                      <span>نسخ الآيدي</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <p className="text-xs text-[#D8D0C4]/90 font-light mt-2 max-w-sm mx-auto leading-relaxed">
+                احتفظي بهذا الآيدي <strong className="text-[#D4BD86] font-mono font-bold">({submittedAppointment.booking_number})</strong> حيث يمكنكِ البحث به في أي وقت لمعرفة حالة طلبكِ عبر خانة "حجوزاتي".
+              </p>
+            </div>
+
             {/* Receipt Summary Card */}
             <div className="bg-[#0B0A09] border border-[#B99A5B]/30 p-5 rounded-sm max-w-lg mx-auto text-right space-y-3 mb-6 text-xs sm:text-sm shadow-inner">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <span className="text-[#D8D0C4]/70">رقم الطلب:</span>
+                <span className="text-[#D8D0C4]/70">آيدي / رقم الطلب:</span>
                 <span className="font-mono font-bold text-[#D4BD86] text-base" dir="ltr">
                   {submittedAppointment.booking_number}
                 </span>
@@ -284,14 +332,25 @@ export const BookingSection: React.FC = () => {
               </div>
             </div>
 
-            {/* Direct Access to My Bookings and WhatsApp */}
+            {/* Direct Actions: PDF Print, My Bookings, and WhatsApp */}
             <div className="flex flex-col gap-3 max-w-lg mx-auto">
+              {/* PDF Printing Button */}
               <button
+                type="button"
+                onClick={() => printBookingPdf(submittedAppointment, settings)}
+                className="w-full py-3.5 px-6 bg-gradient-to-r from-[#D4BD86] via-[#B99A5B] to-[#9E8043] hover:brightness-110 text-[#0B0A09] font-bold text-xs sm:text-sm rounded-sm transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(185,154,91,0.35)] cursor-pointer active:scale-98"
+              >
+                <Printer className="w-4 h-4" />
+                <span>طبع أو حفظ تذكرة الحجز بصيغة PDF</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsMyBookingsOpen(true)}
                 className="w-full py-3 px-6 bg-[#B99A5B]/20 hover:bg-[#B99A5B] text-[#D4BD86] hover:text-[#0B0A09] border border-[#B99A5B]/60 font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
                 <Clock className="w-4 h-4" />
-                <span>عرض ومتابعة حجزك الآن في "حجوزاتي"</span>
+                <span>عرض ومتابعة حالة طلبك في "حجوزاتي"</span>
               </button>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -306,6 +365,7 @@ export const BookingSection: React.FC = () => {
                 </a>
 
                 <button
+                  type="button"
                   onClick={resetBooking}
                   className="w-full sm:w-auto py-3 px-6 bg-white/10 hover:bg-white/15 text-[#F5F1EA] text-xs font-medium rounded-sm border border-white/10 transition-colors cursor-pointer"
                 >
@@ -314,7 +374,7 @@ export const BookingSection: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-[#D8D0C4]/60 pt-2 text-center">
-                💡 يمكنك في أي وقت متابعة حالة طلبك (موافق عليه · قيد الانتظار · مرفوض) من خلال زر <strong>"حجوزاتي"</strong> في أعلى الشاشة.
+                💡 يمكنك في أي وقت استخدام آيدي الحجز <strong className="text-[#D4BD86] font-mono">({submittedAppointment.booking_number})</strong> في شريط "حجوزاتي" بأعلى الموقع لمعرفة حالة الطلب مباشرة.
               </p>
             </div>
           </div>
