@@ -17,7 +17,7 @@ import { useApp } from '../../context/AppContext';
 import { ActiveView } from '../../types';
 
 export const Hero: React.FC = () => {
-  const { navigateTo, settings } = useApp();
+  const { navigateTo, settings, myBookings, setIsMyBookingsOpen } = useApp();
 
   const portalCards: {
     id: ActiveView;
@@ -108,9 +108,28 @@ export const Hero: React.FC = () => {
         </p>
 
         {/* Subtitle / Promise */}
-        <p className="text-xs sm:text-sm text-[#D8D0C4]/80 max-w-lg mb-10 font-light leading-relaxed">
+        <p className="text-xs sm:text-sm text-[#D8D0C4]/80 max-w-lg mb-8 font-light leading-relaxed">
           عالم متكامل للعناية والجمال في أرقى أحياء بغداد. اضغط على أي قسم أو خدمة بالأسفل للاستعراض والتفاصيل.
         </p>
+
+        {/* Customer My Bookings Notification Banner (Shows when user has bookings) */}
+        {myBookings.length > 0 && (
+          <button
+            onClick={() => setIsMyBookingsOpen(true)}
+            className="mb-8 inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#161411] border border-[#B99A5B]/60 hover:border-[#B99A5B] transition-all cursor-pointer shadow-[0_0_20px_rgba(185,154,91,0.2)] group"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#B99A5B] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#B99A5B]" />
+            </span>
+            <span className="text-xs text-[#F5F1EA] font-medium">
+              حجوزاتي: لديكِ <strong className="text-[#D4BD86] font-bold">{myBookings.length}</strong> {myBookings.length === 1 ? 'حجز مسجل' : 'حجوزات مسجلة'} — اضغطي لعرض حالتها (موافق عليه · انتظار · مرفوض)
+            </span>
+            <span className="text-xs text-[#B99A5B] group-hover:translate-x-[-3px] transition-transform">
+              ←
+            </span>
+          </button>
+        )}
 
         {/* Main Immediate Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-14">

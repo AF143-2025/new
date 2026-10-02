@@ -21,6 +21,7 @@ import { Footer } from './components/layout/Footer';
 import { Lightbox } from './components/common/Lightbox';
 import { Toast } from './components/common/Toast';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { MyBookingsModal } from './components/common/MyBookingsModal';
 
 const MainLayout: React.FC = () => {
   const { activeLightboxItem, closeLightbox, activeView } = useApp();
@@ -84,6 +85,9 @@ const MainLayout: React.FC = () => {
       {activeLightboxItem && (
         <Lightbox item={activeLightboxItem} onClose={closeLightbox} />
       )}
+
+      {/* Customer My Bookings Modal */}
+      <MyBookingsModal />
 
       {/* Admin Dashboard */}
       <AdminDashboard />

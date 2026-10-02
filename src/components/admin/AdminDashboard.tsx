@@ -585,13 +585,21 @@ export const AdminDashboard: React.FC = () => {
                                   e.target.value as AppointmentStatus
                                 )
                               }
-                              className="bg-[#0B0A09] border border-white/15 rounded px-2 py-1 text-xs focus:outline-none"
+                              className={`border rounded px-2.5 py-1 text-xs font-semibold focus:outline-none cursor-pointer ${
+                                apt.status === 'confirmed'
+                                  ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                                  : apt.status === 'pending'
+                                  ? 'bg-amber-950/80 border-amber-500/50 text-amber-300'
+                                  : apt.status === 'cancelled'
+                                  ? 'bg-rose-950/80 border-rose-500/50 text-rose-300'
+                                  : 'bg-[#0B0A09] border-white/20 text-[#D8D0C4]'
+                              }`}
                             >
-                              <option value="pending">معلق</option>
-                              <option value="confirmed">مؤكد</option>
-                              <option value="completed">مكتمل</option>
-                              <option value="cancelled">ملغي</option>
-                              <option value="no_show">لم تحضر</option>
+                              <option value="pending" className="bg-[#0B0A09] text-amber-300">قيد الانتظار (انتظار)</option>
+                              <option value="confirmed" className="bg-[#0B0A09] text-emerald-300">موافق عليه (مؤكد)</option>
+                              <option value="cancelled" className="bg-[#0B0A09] text-rose-300">مرفوض (ملغي)</option>
+                              <option value="completed" className="bg-[#0B0A09] text-[#B99A5B]">مكتمل بنجاح</option>
+                              <option value="no_show" className="bg-[#0B0A09] text-gray-400">لم تحضر</option>
                             </select>
                           </td>
                           <td className="p-3 max-w-[200px]">

@@ -1,6 +1,6 @@
 export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
-export type ActiveView = 'home' | 'departments' | 'services' | 'gallery' | 'booking' | 'contact' | 'about';
+export type ActiveView = 'home' | 'departments' | 'services' | 'gallery' | 'booking' | 'contact' | 'about' | 'my-bookings';
 
 export interface Department {
   id: string;

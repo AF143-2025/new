@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Phone, Calendar, ShieldCheck, Instagram, MapPin, MessageCircle } from 'lucide-react';
+import { Menu, X, Phone, Calendar, ShieldCheck, Instagram, MapPin, MessageCircle, Clock } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { useApp } from '../../context/AppContext';
 import { ActiveView } from '../../types';
 
 export const Navbar: React.FC = () => {
-  const { settings, setIsAdminOpen, startBookingFor, activeView, navigateTo } = useApp();
+  const { settings, setIsAdminOpen, startBookingFor, activeView, navigateTo, myBookings, setIsMyBookingsOpen } = useApp();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -81,7 +81,27 @@ export const Navbar: React.FC = () => {
             </nav>
 
             {/* Desktop Actions */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-3">
+              {/* My Bookings Button */}
+              <button
+                onClick={() => setIsMyBookingsOpen(true)}
+                title="متابعة حالة حجوزاتي"
+                aria-label="متابعة حالة حجوزاتي"
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-sm border text-xs font-semibold transition-all cursor-pointer ${
+                  myBookings.length > 0
+                    ? 'bg-[#B99A5B]/15 text-[#F5F1EA] border-[#B99A5B]/60 hover:bg-[#B99A5B]/25 hover:border-[#B99A5B] shadow-[0_0_15px_rgba(185,154,91,0.25)]'
+                    : 'bg-white/5 text-[#D8D0C4]/80 border-white/10 hover:border-[#B99A5B]/40 hover:text-[#F5F1EA]'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-[#B99A5B]" />
+                <span>حجوزاتي</span>
+                {myBookings.length > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#B99A5B] text-[#0B0A09] text-[10px] font-bold flex items-center justify-center">
+                    {myBookings.length}
+                  </span>
+                )}
+              </button>
+
               <button
                 onClick={() => setIsAdminOpen(true)}
                 title="لوحة تحكم الإدارة"
@@ -107,8 +127,27 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="flex items-center gap-2 lg:hidden">
+            {/* Mobile Actions */}
+            <div className="flex items-center gap-1.5 lg:hidden">
+              <button
+                onClick={() => setIsMyBookingsOpen(true)}
+                title="حجوزاتي"
+                aria-label="حجوزاتي"
+                className={`py-1.5 px-2.5 rounded-sm border transition-all flex items-center gap-1.5 text-xs cursor-pointer ${
+                  myBookings.length > 0
+                    ? 'bg-[#B99A5B]/20 text-[#F5F1EA] border-[#B99A5B]/50'
+                    : 'bg-white/5 text-[#D8D0C4]/80 border-white/10'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-[#B99A5B]" />
+                <span className="text-[11px] font-semibold">حجوزاتي</span>
+                {myBookings.length > 0 && (
+                  <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-[#B99A5B] text-[#0B0A09] text-[9px] font-bold flex items-center justify-center">
+                    {myBookings.length}
+                  </span>
+                )}
+              </button>
+
               <button
                 onClick={() => setIsAdminOpen(true)}
                 title="لوحة التحكم"
@@ -169,13 +208,46 @@ export const Navbar: React.FC = () => {
 
           {/* Fullscreen Central Navigation Links */}
           <div className="relative z-10 px-6 sm:px-10 py-6 flex-1 flex flex-col justify-center max-w-lg mx-auto w-full">
-            <div className="text-center mb-6">
+            <div className="text-center mb-5">
               <span className="text-[11px] font-sans uppercase tracking-[0.25em] text-[#B99A5B] font-semibold block mb-1">
                 STYLE CITY BAGHDAD
               </span>
               <p className="text-xs text-[#D8D0C4]/80 font-light">
                 {settings.brand_arabic_tagline} <span className="text-[#B99A5B]">✨</span>
               </p>
+            </div>
+
+            {/* My Bookings Card in Drawer */}
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsMyBookingsOpen(true);
+                }}
+                className="w-full p-3 bg-[#151310] hover:bg-[#B99A5B]/15 border border-[#B99A5B]/40 hover:border-[#B99A5B] rounded-sm flex items-center justify-between text-right transition-all cursor-pointer shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#B99A5B]/20 text-[#B99A5B] flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold text-[#F5F1EA] block">حجوزاتي</span>
+                    <span className="text-[11px] text-[#D8D0C4]/70">
+                      {myBookings.length > 0
+                        ? `لديكِ ${myBookings.length} حجز (موافق عليه · انتظار)`
+                        : 'متابعة حالة حجوزاتكِ السابقة'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {myBookings.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#B99A5B] text-[#0B0A09] text-xs font-bold">
+                      {myBookings.length}
+                    </span>
+                  )}
+                  <span className="text-[#B99A5B] text-sm">←</span>
+                </div>
+              </button>
             </div>
 
             <nav className="flex flex-col gap-2">

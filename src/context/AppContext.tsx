@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   Department,
   Service,
@@ -66,6 +66,15 @@ interface AppContextType {
   updateAppointmentStatus: (id: string, status: AppointmentStatus) => void;
   updateAppointmentNotes: (id: string, internalNotes: string) => void;
   deleteAppointment: (id: string) => void;
+
+  // Customer "حجوزاتي" (My Bookings)
+  isMyBookingsOpen: boolean;
+  setIsMyBookingsOpen: (open: boolean) => void;
+  myBookings: Appointment[];
+  cancelMyBooking: (id: string) => void;
+  lookupBookingsByPhone: (phone: string) => void;
+  customerPhone: string;
+  setCustomerPhone: (phone: string) => void;
 
   // Customers
   customers: Customer[];
@@ -156,6 +165,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('stylecity_admin_auth') === 'true';
   });
+
+  // Customer "حجوزاتي" (My Bookings) State
+  const [isMyBookingsOpen, setIsMyBookingsOpen] = useState(false);
+  const [myBookingIds, setMyBookingIds] = useState<string[]>(() =>
+    loadStored('my_booking_ids', [])
+  );
+  const [customerPhone, setCustomerPhoneState] = useState<string>(() => {
+    return localStorage.getItem('stylecity_customer_phone') || '';
+  });
+
+  const setCustomerPhone = (phone: string) => {
+    setCustomerPhoneState(phone);
+    localStorage.setItem('stylecity_customer_phone', phone);
+  };
+
+  const myBookings = useMemo(() => {
+    const cleanPhone = customerPhone.replace(/\D/g, '');
+    return appointments.filter((apt) => {
+      if (myBookingIds.includes(apt.id)) return true;
+      if (cleanPhone && cleanPhone.length >= 7) {
+        const aptPhoneDigits = apt.customer_phone.replace(/\D/g, '');
+        if (aptPhoneDigits.includes(cleanPhone) || cleanPhone.includes(aptPhoneDigits)) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [appointments, myBookingIds, customerPhone]);
+
+  const lookupBookingsByPhone = (phone: string) => {
+    const clean = phone.trim();
+    setCustomerPhone(clean);
+    const cleanDigits = clean.replace(/\D/g, '');
+    const found = appointments.filter((a) => {
+      const aptDigits = a.customer_phone.replace(/\D/g, '');
+      return cleanDigits.length >= 7 && (aptDigits.includes(cleanDigits) || cleanDigits.includes(aptDigits));
+    });
+    if (found.length > 0) {
+      setMyBookingIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...found.map((a) => a.id)]));
+        localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(merged));
+        return merged;
+      });
+      showToast(`تم العثور على ${found.length} حجز`);
+    } else {
+      showToast('لم يتم العثور على حجوزات مسجلة بهذا الرقم');
+    }
+  };
+
+  const cancelMyBooking = (id: string) => {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a))
+    );
+    showToast('تم إلغاء طلب الحجز');
+  };
 
   // Booking target trigger
   const [selectedDepartmentForBooking, setSelectedDepartmentForBooking] = useState<string | null>(null);
@@ -324,6 +388,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setAppointments((prev) => [newAppointment, ...prev]);
 
+    // Automatically record in customer's myBookings list
+    setMyBookingIds((prev) => {
+      const updated = Array.from(new Set([newAppointment.id, ...prev]));
+      localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(updated));
+      return updated;
+    });
+    setCustomerPhone(data.customer_phone);
+
     // Update customer records
     setCustomers((prev) => {
       const existing = prev.find((c) => c.phone.replace(/\s+/g, '') === data.customer_phone.replace(/\s+/g, ''));
@@ -464,6 +536,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateAppointmentStatus,
         updateAppointmentNotes,
         deleteAppointment,
+        isMyBookingsOpen,
+        setIsMyBookingsOpen,
+        myBookings,
+        cancelMyBooking,
+        lookupBookingsByPhone,
+        customerPhone,
+        setCustomerPhone,
         customers,
         updateCustomerNotes,
         isAdminOpen,

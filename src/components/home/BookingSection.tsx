@@ -23,6 +23,7 @@ export const BookingSection: React.FC = () => {
     createAppointment,
     selectedDepartmentForBooking,
     selectedServiceForBooking,
+    setIsMyBookingsOpen,
   } = useApp();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -226,12 +227,24 @@ export const BookingSection: React.FC = () => {
             </p>
 
             {/* Receipt Summary Card */}
-            <div className="bg-[#0B0A09] border border-[#B99A5B]/20 p-5 rounded-sm max-w-lg mx-auto text-right space-y-3 mb-8 text-xs sm:text-sm">
+            <div className="bg-[#0B0A09] border border-[#B99A5B]/30 p-5 rounded-sm max-w-lg mx-auto text-right space-y-3 mb-6 text-xs sm:text-sm shadow-inner">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <span className="text-[#D8D0C4]/70">رقم الطلب:</span>
                 <span className="font-mono font-bold text-[#D4BD86] text-base" dir="ltr">
                   {submittedAppointment.booking_number}
                 </span>
+              </div>
+
+              {/* Status display */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <span className="text-[#D8D0C4]/70">حالة الحجز الحالية:</span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-bold shadow-sm">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                  </span>
+                  <span>قيد الانتظار (انتظار مراجعة الإدارة)</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -271,24 +284,38 @@ export const BookingSection: React.FC = () => {
               </div>
             </div>
 
-            {/* Direct WhatsApp Action for Instant Salon Notification */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-              <a
-                href={submittedWhatsAppUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto flex-1 py-3 px-6 bg-[#25D366] hover:bg-[#20bd5a] text-[#0B0A09] font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-2 shadow-lg"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>إرسال الطلب عبر واتساب لتسريع التأكيد</span>
-              </a>
-
+            {/* Direct Access to My Bookings and WhatsApp */}
+            <div className="flex flex-col gap-3 max-w-lg mx-auto">
               <button
-                onClick={resetBooking}
-                className="w-full sm:w-auto py-3 px-6 bg-white/10 hover:bg-white/15 text-[#F5F1EA] text-xs font-medium rounded-sm border border-white/10 transition-colors"
+                onClick={() => setIsMyBookingsOpen(true)}
+                className="w-full py-3 px-6 bg-[#B99A5B]/20 hover:bg-[#B99A5B] text-[#D4BD86] hover:text-[#0B0A09] border border-[#B99A5B]/60 font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
-                حجز موعد آخر
+                <Clock className="w-4 h-4" />
+                <span>عرض ومتابعة حجزك الآن في "حجوزاتي"</span>
               </button>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href={submittedWhatsAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto flex-1 py-3 px-6 bg-[#25D366] hover:bg-[#20bd5a] text-[#0B0A09] font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>تأكيد سريع عبر واتساب</span>
+                </a>
+
+                <button
+                  onClick={resetBooking}
+                  className="w-full sm:w-auto py-3 px-6 bg-white/10 hover:bg-white/15 text-[#F5F1EA] text-xs font-medium rounded-sm border border-white/10 transition-colors cursor-pointer"
+                >
+                  حجز موعد آخر
+                </button>
+              </div>
+
+              <p className="text-[11px] text-[#D8D0C4]/60 pt-2 text-center">
+                💡 يمكنك في أي وقت متابعة حالة طلبك (موافق عليه · قيد الانتظار · مرفوض) من خلال زر <strong>"حجوزاتي"</strong> في أعلى الشاشة.
+              </p>
             </div>
           </div>
         ) : (
