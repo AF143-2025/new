@@ -41,6 +41,7 @@ export const MyBookingsModal: React.FC = () => {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Search status state: If exists -> show order, if not exists -> reject
   const [searchState, setSearchState] = useState<{
@@ -63,7 +64,7 @@ export const MyBookingsModal: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = phoneSearch.trim();
     if (!query) {
@@ -71,10 +72,34 @@ export const MyBookingsModal: React.FC = () => {
       return;
     }
 
+    setIsSearching(true);
+
+    // 1. Direct cross-device search on centralized server
+    try {
+      const res = await fetch(`/api/appointments/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.appointment) {
+          const remoteApt = json.appointment as Appointment;
+          setSearchState({
+            hasSearched: true,
+            query,
+            foundItem: remoteApt,
+            notFound: false,
+          });
+          lookupBookings(query);
+          setIsSearching(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Network server lookup failed, falling back to local list:', err);
+    }
+
+    // 2. Search locally in appointments state
     const upper = query.toUpperCase();
     const cleanDigits = query.replace(/\D/g, '');
 
-    // Search among all registered appointments in database
     const match = appointments.find((a) => {
       const aptUpper = a.booking_number.toUpperCase();
       if (aptUpper === upper || aptUpper.includes(upper)) return true;
@@ -105,6 +130,8 @@ export const MyBookingsModal: React.FC = () => {
         notFound: true,
       });
     }
+
+    setIsSearching(false);
   };
 
   const handleResetSearch = () => {
@@ -470,10 +497,20 @@ export const MyBookingsModal: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#B99A5B] hover:bg-[#D4BD86] text-[#0B0A09] font-bold text-xs rounded-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+              disabled={isSearching}
+              className="px-4 py-2 bg-[#B99A5B] hover:bg-[#D4BD86] disabled:opacity-60 text-[#0B0A09] font-bold text-xs rounded-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
             >
-              <Search className="w-3.5 h-3.5" />
-              <span>استعلام وبحث</span>
+              {isSearching ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>جارِ البحث...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="w-3.5 h-3.5" />
+                  <span>استعلام وبحث</span>
+                </>
+              )}
             </button>
           </form>
 

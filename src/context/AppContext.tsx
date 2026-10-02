@@ -151,6 +151,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadStored('customers', initialCustomers)
   );
 
+  // Sync appointments with shared server across all devices
+  useEffect(() => {
+    let isMounted = true;
+    const syncAppointments = async () => {
+      try {
+        const res = await fetch('/api/appointments');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.appointments) && isMounted) {
+            setAppointments(data.appointments);
+          }
+        }
+      } catch {
+        // Silent catch if server offline
+      }
+    };
+
+    syncAppointments();
+    // Live polling every 3.5 seconds so all devices stay updated in real time
+    const interval = setInterval(syncAppointments, 3500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Navigation / View State
   const [activeView, setActiveView] = useState<ActiveView>('home');
 
@@ -428,6 +455,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setAppointments((prev) => [newAppointment, ...prev]);
 
+    // Send to centralized server for cross-device persistence
+    fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAppointment),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json && json.success && json.appointment) {
+          const serverApt = json.appointment as Appointment;
+          setAppointments((prev) => [serverApt, ...prev.filter((a) => a.id !== newAppointment.id)]);
+        }
+      })
+      .catch((err) => console.warn('Server booking sync error:', err));
+
     // Automatically record in customer's myBookings list
     setMyBookingIds((prev) => {
       const updated = Array.from(new Set([newAppointment.id, ...prev]));
@@ -482,6 +524,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateAppointmentStatus = (id: string, status: AppointmentStatus) => {
     setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+    fetch(`/api/appointments/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }).catch(console.warn);
     showToast(`تم تعديل حالة الحجز`);
   };
 
@@ -489,6 +536,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, internal_notes: internalNotes } : a))
     );
+    fetch(`/api/appointments/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ internal_notes: internalNotes }),
+    }).catch(console.warn);
     showToast('تم حفظ ملاحظات الحجز');
   };
 
@@ -503,6 +555,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(filtered));
       return filtered;
     });
+    fetch(`/api/appointments/${id}`, {
+      method: 'DELETE',
+    }).catch(console.warn);
     showToast('تم حذف الحجز نهائياً بنجاح');
   };
 
