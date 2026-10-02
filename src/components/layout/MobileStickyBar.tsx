@@ -3,7 +3,9 @@ import { Phone, MessageCircle, Calendar } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const MobileStickyBar: React.FC = () => {
-  const { settings, startBookingFor } = useApp();
+  const { settings, startBookingFor, isAdminOpen, isMyBookingsOpen } = useApp();
+
+  if (isAdminOpen || isMyBookingsOpen) return null;
 
   const cleanWhatsApp = settings.whatsapp_number.replace(/\D/g, '');
   const defaultWhatsAppText = encodeURIComponent(
@@ -12,7 +14,7 @@ export const MobileStickyBar: React.FC = () => {
   const whatsappUrl = `https://wa.me/${cleanWhatsApp}?text=${defaultWhatsAppText}`;
 
   return (
-    <aside aria-label="شريط التواصل السريع" className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-[#0B0A09]/95 backdrop-blur-lg border-t border-[#B99A5B]/30 px-3 py-2 pb-safe shadow-[0_-8px_25px_rgba(0,0,0,0.8)]">
+    <aside aria-label="شريط التواصل السريع" className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-[#0B0A09]/95 backdrop-blur-lg border-t border-[#B99A5B]/30 px-3 py-2 pb-safe shadow-[0_-8px_25px_rgba(0,0,0,0.8)]">
       <div className="grid grid-cols-3 gap-2">
         {/* Call Button */}
         <a

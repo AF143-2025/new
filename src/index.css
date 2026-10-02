@@ -16,6 +16,8 @@
 
   html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -23,6 +25,9 @@
     background-color: #0b0a09;
     color: #f5f1ea;
     overflow-x: hidden;
+    width: 100%;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

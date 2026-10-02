@@ -116,16 +116,16 @@ export const Hero: React.FC = () => {
         {myBookings.length > 0 && (
           <button
             onClick={() => setIsMyBookingsOpen(true)}
-            className="mb-8 inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#161411] border border-[#B99A5B]/60 hover:border-[#B99A5B] transition-all cursor-pointer shadow-[0_0_20px_rgba(185,154,91,0.2)] group"
+            className="mb-8 inline-flex items-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-2.5 rounded-full bg-[#161411] border border-[#B99A5B]/60 hover:border-[#B99A5B] transition-all cursor-pointer shadow-[0_0_20px_rgba(185,154,91,0.2)] group max-w-[94vw]"
           >
-            <span className="relative flex h-2.5 w-2.5">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#B99A5B] opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#B99A5B]" />
             </span>
-            <span className="text-xs text-[#F5F1EA] font-medium">
-              حجوزاتي: لديكِ <strong className="text-[#D4BD86] font-bold">{myBookings.length}</strong> {myBookings.length === 1 ? 'حجز مسجل' : 'حجوزات مسجلة'} — اضغطي لعرض حالتها (موافق عليه · انتظار · مرفوض)
+            <span className="text-xs text-[#F5F1EA] font-medium text-right leading-tight">
+              حجوزاتي: لديكِ <strong className="text-[#D4BD86] font-bold">{myBookings.length}</strong> {myBookings.length === 1 ? 'حجز مسجل' : 'حجوزات مسجلة'} — اضغطي لعرض حالتها
             </span>
-            <span className="text-xs text-[#B99A5B] group-hover:translate-x-[-3px] transition-transform">
+            <span className="text-xs text-[#B99A5B] group-hover:translate-x-[-3px] transition-transform shrink-0">
               ←
             </span>
           </button>
