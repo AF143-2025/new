@@ -1,0 +1,7 @@
+{
+  "name": "Style City Baghdad - The City of Beauty",
+  "description": "STYLE CITY BAGHDAD - The City of Beauty. عالم متكامل للجمال والعناية في المنصور، شارع الأميرات، بغداد.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

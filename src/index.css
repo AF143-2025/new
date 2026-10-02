@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #0b0a09;
+    --ivory: #f5f1ea;
+    --text-dark: #24211d;
+    --gold: #b99a5b;
+    --gold-light: #d8c28c;
+    --gold-dark: #8c713b;
+    --beige: #d8d0c4;
+    --font-arabic: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #0b0a09;
+    color: #f5f1ea;
+    overflow-x: hidden;
+  }
+}
+
+.font-serif-luxury {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.font-arabic-luxury {
+  font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #faebd7 0%, #d4bc86 40%, #b99a5b 70%, #9e7f3c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #d4bc86 0%, #b99a5b 60%, #9e7f3c 100%);
+}
+
+.gold-subtle-border {
+  border-color: rgba(185, 154, 91, 0.22);
+}
+
+.gold-glow {
+  box-shadow: 0 0 25px -5px rgba(185, 154, 91, 0.15);
+}
+
+/* Subtle luxury scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0a09;
+}
+::-webkit-scrollbar-thumb {
+  background: #25221c;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b99a5b;
+}
+
