@@ -187,16 +187,7 @@ export const Navbar: React.FC = () => {
           <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#B99A5B]/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Drawer Central Navigation Links */}
-          <div className="relative z-10 px-5 sm:px-8 py-5 flex-1 flex flex-col justify-center max-w-lg mx-auto w-full">
-            <div className="text-center mb-4">
-              <span className="text-[11px] font-sans uppercase tracking-[0.25em] text-[#B99A5B] font-semibold block mb-1">
-                STYLE CITY BAGHDAD
-              </span>
-              <p className="text-xs text-[#D8D0C4]/80 font-light">
-                {settings.brand_arabic_tagline} <span className="text-[#B99A5B]">✨</span>
-              </p>
-            </div>
-
+          <div className="relative z-10 px-5 sm:px-8 py-4 flex-1 flex flex-col justify-center max-w-lg mx-auto w-full">
             {/* My Bookings Card in Drawer */}
             <div className="mb-3">
               <button

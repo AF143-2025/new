@@ -21,6 +21,7 @@ export const MyBookingsModal: React.FC = () => {
     setIsMyBookingsOpen,
     myBookings,
     cancelMyBooking,
+    deleteAppointment,
     lookupBookingsByPhone,
     customerPhone,
     settings,
@@ -30,6 +31,7 @@ export const MyBookingsModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
   const [phoneSearch, setPhoneSearch] = useState(customerPhone || '');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   if (!isMyBookingsOpen) return null;
 
@@ -309,11 +311,21 @@ export const MyBookingsModal: React.FC = () => {
                       {getStatusBadge(apt.status)}
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-[#D8D0C4]/60">رقم الحجز:</span>
-                      <span className="font-mono font-bold text-[#D4BD86] text-sm tracking-wider" dir="ltr">
-                        {apt.booking_number}
-                      </span>
+                    <div className="flex items-center gap-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[#D8D0C4]/60">رقم الحجز:</span>
+                        <span className="font-mono font-bold text-[#D4BD86] text-sm tracking-wider" dir="ltr">
+                          {apt.booking_number}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setDeletingId(apt.id)}
+                        title="حذف الحجز نهائياً"
+                        aria-label="حذف الحجز نهائياً"
+                        className="p-1.5 text-[#D8D0C4]/50 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -370,35 +382,68 @@ export const MyBookingsModal: React.FC = () => {
                       <span>مراسلة الإدارة عبر واتساب</span>
                     </a>
 
-                    {(apt.status === 'pending' || apt.status === 'confirmed') && (
-                      <div>
-                        {cancellingId === apt.id ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-rose-300">تأكيد الإلغاء؟</span>
-                            <button
-                              onClick={() => handleCancelClick(apt.id)}
-                              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-sm cursor-pointer"
-                            >
-                              نعم، إلغاء
-                            </button>
-                            <button
-                              onClick={() => setCancellingId(null)}
-                              className="px-2 py-1 bg-white/10 hover:bg-white/20 text-[#D8D0C4] text-[11px] rounded-sm cursor-pointer"
-                            >
-                              تراجع
-                            </button>
-                          </div>
-                        ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Delete permanently button */}
+                      {deletingId === apt.id ? (
+                        <div className="flex items-center gap-1.5 bg-rose-950/70 px-2 py-1 rounded-sm border border-rose-500/40 animate-fade-in">
+                          <span className="text-[11px] text-rose-200">حذف نهائياً؟</span>
                           <button
-                            onClick={() => setCancellingId(apt.id)}
-                            className="px-3 py-1.5 text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/30 text-xs rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
+                            onClick={() => {
+                              deleteAppointment(apt.id);
+                              setDeletingId(null);
+                            }}
+                            className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-sm cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>إلغاء الحجز</span>
+                            نعم، احذف
                           </button>
-                        )}
-                      </div>
-                    )}
+                          <button
+                            onClick={() => setDeletingId(null)}
+                            className="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-[#D8D0C4] text-[10px] rounded-sm cursor-pointer"
+                          >
+                            تراجع
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeletingId(apt.id)}
+                          className="px-2.5 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 text-xs rounded-sm transition-colors flex items-center gap-1 border border-rose-500/20 cursor-pointer"
+                          title="حذف هذا الحجز نهائياً من القائمة"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف</span>
+                        </button>
+                      )}
+
+                      {/* Cancel request button */}
+                      {(apt.status === 'pending' || apt.status === 'confirmed') && (
+                        <div>
+                          {cancellingId === apt.id ? (
+                            <div className="flex items-center gap-1.5 bg-amber-950/70 px-2 py-1 rounded-sm border border-amber-500/40 animate-fade-in">
+                              <span className="text-[11px] text-amber-200">طلب إلغاء؟</span>
+                              <button
+                                onClick={() => handleCancelClick(apt.id)}
+                                className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-[#0B0A09] text-[10px] font-bold rounded-sm cursor-pointer"
+                              >
+                                نعم، إلغاء
+                              </button>
+                              <button
+                                onClick={() => setCancellingId(null)}
+                                className="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-[#D8D0C4] text-[10px] rounded-sm cursor-pointer"
+                              >
+                                تراجع
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setCancellingId(apt.id)}
+                              className="px-2.5 py-1.5 text-amber-300/80 hover:text-amber-300 hover:bg-amber-950/30 text-xs rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>إلغاء الطلب</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

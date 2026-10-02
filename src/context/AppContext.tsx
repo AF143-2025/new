@@ -453,8 +453,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAppointment = (id: string) => {
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
-    showToast('تم حذف الحجز');
+    setAppointments((prev) => {
+      const updated = prev.filter((a) => a.id !== id);
+      localStorage.setItem('stylecity_appointments', JSON.stringify(updated));
+      return updated;
+    });
+    setMyBookingIds((prev) => {
+      const filtered = prev.filter((bookingId) => bookingId !== id);
+      localStorage.setItem('stylecity_my_booking_ids', JSON.stringify(filtered));
+      return filtered;
+    });
+    showToast('تم حذف الحجز نهائياً بنجاح');
   };
 
   const updateCustomerNotes = (id: string, notes: string) => {
